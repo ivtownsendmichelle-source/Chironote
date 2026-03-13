@@ -122,7 +122,6 @@
 </style>
 </head>
 <body>
-
 <header class="header">
   <div class="logo-ribbon">
     <svg viewBox="0 0 44 44" fill="none">
@@ -142,9 +141,7 @@
     <span class="date-display" id="dateDisplay"></span>
   </div>
 </header>
-
 <div class="main">
-
   <div class="left-panel">
     <div>
       <div class="panel-label">Patient</div>
@@ -171,7 +168,6 @@
       </div>
     </div>
   </div>
-
   <div class="center-panel">
     <div class="patient-banner" id="patientBanner">
       <div><div class="no-patient">No patient selected — search or add a patient to begin</div></div>
@@ -188,7 +184,7 @@
         <span class="placeholder">Your spoken words will appear here as you dictate...</span>
       </div>
     </div>
-    <div class="note-output">
+    <div class="note-output" id="noteOutput">
       <h3 id="noteTitle">Clinical Note</h3>
       <div id="noteContent">
         <div style="color:#aab4c4;font-style:italic;font-size:0.88rem;padding:10px 0;">Dictate your clinical findings above, then the formatted note will appear here.</div>
@@ -201,7 +197,6 @@
       <button class="btn btn-danger" onclick="clearAll()">Clear</button>
     </div>
   </div>
-
   <div class="right-panel">
     <div>
       <div class="panel-label">Spinal Segments</div>
@@ -269,9 +264,7 @@
       <button class="clear-spine-btn" onclick="clearSpine()" style="margin-top:8px;">Clear All Segments</button>
     </div>
   </div>
-
 </div>
-
 <div class="modal-overlay" id="addPatientModal">
   <div class="modal">
     <h3>Add New Patient</h3>
@@ -284,7 +277,6 @@
     </div>
   </div>
 </div>
-
 <div class="modal-overlay" id="viewNoteModal">
   <div class="modal" style="width:560px;max-height:80vh;overflow-y:auto;">
     <h3 id="viewNoteTitle">Visit Note</h3>
@@ -294,9 +286,7 @@
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
-
 <script>
 let currentPatient = null;
 let currentTemplate = 'soap_new';
@@ -320,19 +310,16 @@ function toggleSegment(seg, el) {
   else { selectedSegments.splice(idx, 1); el.classList.remove('selected'); }
   updateSegmentDisplay();
 }
-
 function updateSegmentDisplay() {
   const box = document.getElementById('selectedSegments');
   if (selectedSegments.length === 0) { box.innerHTML = '<p>None selected</p>'; return; }
   box.innerHTML = selectedSegments.map(s => `<span class="segment-tag" onclick="removeSegment('${s}')">${s} ×</span>`).join('');
 }
-
 function removeSegment(seg) {
   selectedSegments = selectedSegments.filter(s => s !== seg);
   document.querySelectorAll(`.vertebra[data-seg="${seg}"]`).forEach(el => el.classList.remove('selected'));
   updateSegmentDisplay();
 }
-
 function clearSpine() {
   selectedSegments = [];
   document.querySelectorAll('.vertebra').forEach(el => el.classList.remove('selected'));
@@ -341,7 +328,7 @@ function clearSpine() {
 
 function setupSpeechRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) { document.getElementById('recordStatus').textContent = 'Speech recognition not supported in this browser. Use Chrome.'; return; }
+  if (!SpeechRecognition) { document.getElementById('recordStatus').textContent = 'Speech recognition not supported. Use Chrome.'; return; }
   recognition = new SpeechRecognition();
   recognition.continuous = true;
   recognition.interimResults = true;
@@ -356,7 +343,15 @@ function setupSpeechRecognition() {
     const box = document.getElementById('transcriptBox');
     box.innerHTML = `<span style="color:#333">${fullTranscript}</span><span style="color:#aab4c4;font-style:italic">${interim}</span>`;
   };
-  recognition.onerror = e => { if (e.error !== 'no-speech') { showToast('Microphone error: ' + e.error); stopRecording(); } };
+  recognition.onerror = e => {
+    if (e.error === 'not-allowed') {
+      document.getElementById('recordStatus').textContent = 'Microphone blocked. Click the lock icon in your address bar and allow microphone access, then refresh.';
+      stopRecording();
+    } else if (e.error !== 'no-speech') {
+      showToast('Microphone error: ' + e.error);
+      stopRecording();
+    }
+  };
   recognition.onend = () => { if (isRecording) recognition.start(); };
 }
 
@@ -364,9 +359,8 @@ function toggleRecording() {
   if (!currentPatient) { showToast('Please select a patient first'); return; }
   isRecording ? stopRecording() : startRecording();
 }
-
 function startRecording() {
-  if (!recognition) { showToast('Speech recognition not available'); return; }
+  if (!recognition) { showToast('Speech recognition not available. Use Chrome.'); return; }
   isRecording = true;
   recognition.start();
   document.getElementById('micBtn').classList.add('recording');
@@ -375,7 +369,6 @@ function startRecording() {
   const box = document.getElementById('transcriptBox');
   if (box.querySelector('.placeholder')) box.innerHTML = '';
 }
-
 function stopRecording() {
   isRecording = false;
   if (recognition) recognition.stop();
@@ -393,7 +386,6 @@ document.getElementById('patientInput').addEventListener('input', function() {
   list.innerHTML = matches.map(p => `<div class="autocomplete-item" onclick="selectPatient('${p.id}')">${p.first} ${p.last}${p.dob ? ' — ' + p.dob : ''}</div>`).join('');
   list.classList.add('show');
 });
-
 document.addEventListener('click', e => { if (!e.target.closest('.patient-search')) document.getElementById('autocompleteList').classList.remove('show'); });
 
 function selectPatient(id) {
@@ -403,10 +395,8 @@ function selectPatient(id) {
   document.getElementById('patientBanner').innerHTML = `<div><div class="patient-name">${currentPatient.first} ${currentPatient.last}</div><div class="patient-sub">${currentPatient.dob ? 'DOB: ' + currentPatient.dob + '  |  ' : ''}Patient ID: ${currentPatient.id}</div></div>`;
   loadHistory();
 }
-
 function openAddPatient() { document.getElementById('addPatientModal').classList.add('show'); document.getElementById('newPatientFirst').focus(); }
 function closeModal() { document.getElementById('addPatientModal').classList.remove('show'); }
-
 function saveNewPatient() {
   const first = document.getElementById('newPatientFirst').value.trim();
   const last = document.getElementById('newPatientLast').value.trim();
@@ -491,11 +481,7 @@ function saveNote() {
       if (contents[i]) noteText += `${label}:\n${contents[i].textContent}\n\n`;
     });
   } else { noteText = contents[0]?.textContent || ''; }
-  const note = {
-    id: Date.now().toString(), patientId: currentPatient.id,
-    date: new Date().toLocaleDateString('en-US'), template: currentTemplate,
-    segments: [...selectedSegments], text: noteText, transcript: fullTranscript
-  };
+  const note = { id: Date.now().toString(), patientId: currentPatient.id, date: new Date().toLocaleDateString('en-US'), template: currentTemplate, segments: [...selectedSegments], text: noteText, transcript: fullTranscript };
   notes.push(note);
   try { localStorage.setItem('chironote_notes', JSON.stringify(notes)); } catch(e) {}
   loadHistory();
@@ -553,3 +539,4 @@ function showToast(msg) {
 </script>
 </body>
 </html>
+There it is. Copy everything from the very top line all the way to the bottom. Paste it into GitHub and commit. Also note I improved the microphone error message so if Owen has it blocked it will now tell him exactly what to do right on screen.
